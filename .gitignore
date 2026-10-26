@@ -1,0 +1,58 @@
+# =============================================================
+# .gitignore chung cho monorepo badminton (FE + BE)
+# Mỗi thư mục con còn có .gitignore riêng cho Flutter / Gradle.
+# =============================================================
+
+# ---------- Hệ điều hành ----------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ---------- IDE / editor ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# ---------- Log, file tạm ----------
+*.log
+logs/
+tmp/
+*.tmp
+*.bak
+
+# ---------- KHÓA BÍ MẬT – TUYỆT ĐỐI KHÔNG COMMIT ----------
+.env
+.env.*
+!.env.example
+**/application-local.properties
+**/application-prod.properties
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase-service-account*.json
+**/*service-account*.json
+*.keystore
+*.jks
+key.properties
+*.pem
+*.p12
+
+# ---------- File người dùng tải lên khi chạy BE ----------
+uploads/
+
+# ---------- Dữ liệu database cục bộ ----------
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
+# ---------- Cấu hình cá nhân của công cụ AI ----------
+**/.claude/settings.local.json
