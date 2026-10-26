@@ -22,4 +22,12 @@ class AppFormatters {
     final end = (startHour + 1).toString().padLeft(2, '0');
     return '$start:00 - $end:00';
   }
+
+  /// Dinh dang ngay thang Viet Nam: dd/MM/yyyy
+  static String dateVn(DateTime date) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final y = date.year.toString();
+    return '$d/$m/$y';
+  }
 }

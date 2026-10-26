@@ -7,7 +7,7 @@ Chốt các mục dưới đây trong **Sprint 0, trước khi viết code nghi�
 | D1 | Database | SQLite (đang khai báo trong `build.gradle`) / SQL Server | **SQL Server** | |
 | D2 | Cơ chế xác thực | Spring Boot tự cấp JWT / Firebase Auth + BE verify token | **Spring Boot tự cấp JWT**, Google Sign-In qua Firebase chỉ là cách đăng nhập phụ | |
 | D3 | Lưu ảnh (ảnh sân, avatar, giấy phép) | Thư mục `uploads/` trên server / Firebase Storage / Cloudinary | **Thư mục `uploads/`** cho bản demo, trừu tượng hóa qua `StorageService` để đổi sau | |
-| D4 | Cổng thanh toán | VNPay / MoMo / ZaloPay | **VNPay sandbox** làm chính (tài liệu tiếng Việt đầy đủ), các cổng khác để sau | |
+| D4 | Cổng thanh toán | PayOS (VietQR) / VNPay / MoMo | **PayOS (VietQR Open Banking)** làm chính (quét mã VietQR 24/7, khớp đơn tức thì, đối soát webhook tự động), các cổng khác để sau | Đã chốt PayOS |
 | D5 | Mô hình AI | Gemini / OpenAI / Claude | Chọn cổng có **gói miễn phí hoặc tín dụng thử** và hỗ trợ function calling | |
 | D6 | State management Flutter | Provider / Riverpod / Bloc | **Riverpod** (ít boilerplate hơn Bloc, test dễ hơn Provider) | |
 | D7 | Giao diện Admin | Trong app Flutter / web riêng | **Trong app Flutter**, menu theo role | |
@@ -39,4 +39,4 @@ Có thể giữ SQLite cho test nếu muốn, nhưng migration Flyway phải vi�
 
 ### D9 – Vì sao cần URL công khai
 
-VNPay gọi **IPN** về server của mình để báo kết quả thanh toán. IPN không gọi được `localhost`, nên khi dev cần ngrok (hoặc tương đương) để có URL công khai.
+PayOS gọi **Webhook** về server của mình để báo kết quả thanh toán. Webhook không gọi được `localhost`, nên khi dev cần ngrok (hoặc tương đương) để có URL công khai.

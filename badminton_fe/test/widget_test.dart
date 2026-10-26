@@ -3,12 +3,15 @@ import 'package:badminton_fe/core/router/app_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Sprint 0 foundation renders Customer, Owner, and Admin shells',
+  testWidgets('Sprint 0-2 renders Customer Explore map (C-01) and route guards',
       (WidgetTester tester) async {
     await tester.pumpWidget(const BadmintonApp());
 
-    // Customer shell loads by default
-    expect(find.text('Đặt sân cầu lông trong 30 giây'), findsOneWidget);
+    // Customer shell loads C-01 Explore screen by default
+    expect(
+      find.text('C-01 Tìm sân cầu lông theo tên hoặc đường'),
+      findsOneWidget,
+    );
 
     // Route guard redirects unauthorized access to current role base path
     expect(

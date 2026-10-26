@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../features/admin/presentation/admin_approval_screens.dart';
 import '../../features/auth/presentation/auth_flow_screens.dart';
+import '../../features/customer/booking/presentation/my_bookings_screen.dart';
+import '../../features/customer/home_map/presentation/customer_explore_screen.dart';
+import '../../features/customer/profile/presentation/customer_account_screen.dart';
 import '../../features/customer/venue/data/fake_venue_repository.dart';
 import '../../features/owner/venue_manage/presentation/owner_venue_screens.dart';
 import '../l10n/app_strings.dart';
@@ -340,7 +344,11 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
   Widget _buildShellBody() {
     switch (_currentRole) {
       case UserRole.customer:
-        return CustomerShellView(tabIndex: _tabIndex);
+        return CustomerShellView(
+          tabIndex: _tabIndex,
+          onSelectTab: (idx) => setState(() => _tabIndex = idx),
+          onSwitchRole: _switchRole,
+        );
       case UserRole.owner:
         return OwnerShellView(tabIndex: _tabIndex);
       case UserRole.admin:
@@ -349,10 +357,18 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
   }
 }
 
-/// Shell giao dien cua CUSTOMER (C-01, C-05, Design System Harness).
+/// Shell giao dien cua CUSTOMER (C-01, C-05, C-09, C-14, Design System Harness).
 class CustomerShellView extends StatefulWidget {
   final int tabIndex;
-  const CustomerShellView({super.key, required this.tabIndex});
+  final ValueChanged<int>? onSelectTab;
+  final ValueChanged<UserRole>? onSwitchRole;
+
+  const CustomerShellView({
+    super.key,
+    required this.tabIndex,
+    this.onSelectTab,
+    this.onSwitchRole,
+  });
 
   @override
   State<CustomerShellView> createState() => _CustomerShellViewState();
@@ -408,11 +424,24 @@ class _CustomerShellViewState extends State<CustomerShellView> {
     final t = context.tokens;
     final textTheme = Theme.of(context).textTheme;
 
+    if (widget.tabIndex == 0) {
+      return const CustomerExploreScreen();
+    }
     if (widget.tabIndex == 1) {
+      return MyBookingsScreen(
+        onExploreTap: () => widget.onSelectTab?.call(0),
+      );
+    }
+    if (widget.tabIndex == 2) {
       return _buildSlotBookingTab(context);
     }
-    if (widget.tabIndex == 4) {
+    if (widget.tabIndex == 3) {
       return _buildComponentShowcaseTab(context);
+    }
+    if (widget.tabIndex == 4) {
+      return CustomerAccountScreen(
+        onSwitchRole: widget.onSwitchRole,
+      );
     }
 
     return ListView(
@@ -762,6 +791,9 @@ class AdminShellView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (tabIndex == 1) {
+      return const AdminApprovalCenterView();
+    }
     final t = context.tokens;
     final textTheme = Theme.of(context).textTheme;
 

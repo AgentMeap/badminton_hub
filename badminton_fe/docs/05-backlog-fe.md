@@ -8,11 +8,11 @@ Chủ đề: **NT** nền tảng chung · **DB** Database · **MAP** Map · **PA
 
 | ✓ | ID | Task | Chủ đề | Phụ trách | Phụ thuộc |
 |---|---|---|---|---|---|
-| [ ] | FE-01 | Chốt và thêm package vào `pubspec.yaml`, tạo cấu trúc thư mục | NT | | D6 |
-| [ ] | FE-02 | `Env` đọc `API_BASE_URL`; `DioClient`, `ApiException` | NT | | |
-| [ ] | FE-03 | Theme theo design system, font Be Vietnam Pro | NT | | |
-| [ ] | FE-04 | Component dùng chung: `AppButton`, `AppTextField`, `StatusChip`, `AsyncView`, `EmptyState`, `PriceText`, `ConfirmDialog` | NT | | FE-03 |
-| [ ] | FE-05 | `go_router` + 3 shell + redirect theo role | NT | | |
+| [x] | FE-01 | Chốt và thêm package vào `pubspec.yaml`, tạo cấu trúc thư mục | NT | | D6 |
+| [x] | FE-02 | `Env` đọc `API_BASE_URL`; `DioClient`, `ApiException` | NT | | |
+| [x] | FE-03 | Theme theo design system, font Be Vietnam Pro | NT | | |
+| [x] | FE-04 | Component dùng chung: `AppButton`, `AppTextField`, `StatusChip`, `AsyncView`, `EmptyState`, `PriceText`, `ConfirmDialog` | NT | | FE-03 |
+| [x] | FE-05 | `go_router` + 3 shell + redirect theo role | NT | | |
 | [ ] | FE-06 | Figma: khung chung + wireframe các màn hình MVP | Tất cả | | |
 | [ ] | FE-07 | Cấu hình Google Maps key, Firebase (`google-services.json`) trên Android | MAP, NOTI | | |
 
@@ -20,34 +20,34 @@ Chủ đề: **NT** nền tảng chung · **DB** Database · **MAP** Map · **PA
 
 | ✓ | ID | Task | Màn hình | Chủ đề | Phụ trách | Story |
 |---|---|---|---|---|---|---|
-| [ ] | FE-10 | Lưu token an toàn, `AuthInterceptor` tự refresh, đăng xuất | — | SEC | | C03 |
-| [ ] | FE-11 | Splash + đăng nhập (chọn vai trò) | S-01, S-02 | SEC | | C03 |
-| [ ] | FE-12 | Đăng ký Customer + validate | S-03 | SEC | | C01 |
-| [ ] | FE-13 | Component `OtpInput` + màn hình OTP dùng chung (gửi `deviceId`) | S-04 | SEC | | C02, C04 |
-| [ ] | FE-14 | Quên / đặt lại mật khẩu | S-05, S-06 | SEC | | C05 |
-| [ ] | FE-15 | Đăng ký chủ sân + trạng thái hồ sơ | O-01, O-02 | SEC | | O01 |
-| [ ] | FE-16 | Danh sách cơ sở, tạo/sửa cơ sở, tải ảnh, tiện ích | O-04, O-05 | DB | | O03 |
-| [ ] | FE-17 | Ghim vị trí: marker kéo được + geocode | O-06 | MAP | | O04 |
-| [ ] | FE-18 | Sân con, bảng giá, giờ mở cửa | O-07, O-08 | DB | | O05–O07 |
+| [x] | FE-10 | Lưu token an toàn, `AuthInterceptor` tự refresh, đăng xuất | — | SEC | | C03 |
+| [x] | FE-11 | Splash + đăng nhập (chọn vai trò) | S-01, S-02 | SEC | | C03 |
+| [x] | FE-12 | Đăng ký Customer + validate | S-03 | SEC | | C01 |
+| [x] | FE-13 | Component `OtpInput` + màn hình OTP dùng chung (gửi `deviceId`) | S-04 | SEC | | C02, C04 |
+| [x] | FE-14 | Quên / đặt lại mật khẩu | S-05, S-06 | SEC | | C05 |
+| [x] | FE-15 | Đăng ký chủ sân + trạng thái hồ sơ | O-01, O-02 | SEC | | O01 |
+| [x] | FE-16 | Danh sách cơ sở, tạo/sửa cơ sở, tải ảnh, tiện ích | O-04, O-05 | DB | | O03 |
+| [x] | FE-17 | Ghim vị trí: marker kéo được + geocode | O-06 | MAP | | O04 |
+| [x] | FE-18 | Sân con, bảng giá, giờ mở cửa | O-07, O-08 | DB | | O05–O07 |
 
 ## Sprint 2 – Tìm sân & chọn giờ
 
 | ✓ | ID | Task | Màn hình | Chủ đề | Phụ trách | Story |
 |---|---|---|---|---|---|---|
-| [ ] | FE-20 | Bản đồ sân gần tôi: quyền vị trí, marker, card tóm tắt, dạng danh sách | C-01 | MAP | | C08 |
-| [ ] | FE-21 | Bộ lọc & sắp xếp | C-02 | MAP | | C09 |
-| [ ] | FE-22 | Chi tiết sân + nút chỉ đường | C-03 | MAP | | C10, C11 |
-| [ ] | FE-23 | `SlotGrid` + màn chọn khung giờ, xử lý 409 | C-05 | DB | | C12, C13 |
-| [ ] | FE-24 | Admin duyệt hồ sơ chủ sân, duyệt cơ sở sân (có bản đồ) | A-02, A-03 | SEC, MAP | | A02, A05 |
+| [x] | FE-20 | Bản đồ sân gần tôi: quyền vị trí, marker, card tóm tắt, dạng danh sách | C-01 | MAP | | C08 |
+| [x] | FE-21 | Bộ lọc & sắp xếp | C-02 | MAP | | C09 |
+| [x] | FE-22 | Chi tiết sân + nút chỉ đường | C-03 | MAP | | C10, C11 |
+| [x] | FE-23 | `SlotGrid` + màn chọn khung giờ, xử lý 409 | C-05 | DB | | C12, C13 |
+| [x] | FE-24 | Admin duyệt hồ sơ chủ sân, duyệt cơ sở sân (có bản đồ) | A-02, A-03 | SEC, MAP | | A02, A05 |
 
 ## Sprint 3 – Thanh toán & lịch sử
 
 | ✓ | ID | Task | Màn hình | Chủ đề | Phụ trách | Story |
 |---|---|---|---|---|---|---|
-| [ ] | FE-30 | Xác nhận & thanh toán, đếm ngược giữ chỗ | C-07 | PAY | | C13, C17, C18 |
-| [ ] | FE-31 | WebView VNPay, bắt return URL, màn kết quả | C-08 | PAY | | C17 |
-| [ ] | FE-32 | Lịch đặt của tôi + chi tiết lượt đặt có QR | C-09, C-10 | DB | | C15 |
-| [ ] | FE-33 | Tài khoản Customer (menu) | C-14 | SEC | | C06 |
+| [x] | FE-30 | Xác nhận & thanh toán, đếm ngược giữ chỗ | C-07 | PAY | | C13, C17, C18 |
+| [x] | FE-31 | Cổng thanh toán PayOS (VietQR Open Banking), webhook/return URL, màn kết quả | C-08 | PAY | | C17 |
+| [x] | FE-32 | Lịch đặt của tôi + chi tiết lượt đặt có QR | C-09, C-10 | DB | | C15 |
+| [x] | FE-33 | Tài khoản Customer (menu) | C-14 | SEC | | C06 |
 
 ## Sprint 4 – Thông báo, check-in, Chat AI
 

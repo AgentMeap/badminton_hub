@@ -34,7 +34,7 @@ flowchart TD
     C03 -->|Đặt sân| C05[C-05 Chọn khung giờ]
     C05 -->|giữ chỗ OK| C07[C-07 Xác nhận & thanh toán]
     C05 -->|409 trùng giờ| C05
-    C07 -->|VNPay| C08[C-08 Thanh toán VNPay]
+    C07 -->|PayOS VietQR| C08[C-08 Thanh toán PayOS]
     C07 -->|Trả tại sân| C10
     C08 -->|thành công| C10[C-10 Chi tiết lượt đặt + QR]
     C08 -->|thất bại, còn giữ chỗ| C07
