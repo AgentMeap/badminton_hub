@@ -53,12 +53,12 @@ Chủ đề: **NT** nền tảng chung · **DB** Database · **MAP** Map · **PA
 
 | ✓ | ID | Task | Màn hình | Chủ đề | Phụ trách | Story |
 |---|---|---|---|---|---|---|
-| [ ] | FE-40 | Khởi tạo FCM, gửi token, xử lý chạm thông báo theo `data.type` | — | NOTI | | C21 |
-| [ ] | FE-41 | Màn hình thông báo + badge chưa đọc | S-08 | NOTI | | C23 |
-| [ ] | FE-42 | Cài đặt nhắc lịch | S-09 | NOTI | | C22 |
-| [ ] | FE-43 | Owner: Hôm nay + Timeline | O-03, O-10 | DB | | O08 |
-| [ ] | FE-44 | Quét QR check-in | O-13 | DB | | O11 |
-| [ ] | FE-45 | Chat AI: khung chat, gợi ý nhanh, thẻ sân "Đặt ngay" | C-13 | AI | | C24, C25 |
+| [x] | FE-40 | Khởi tạo FCM, gửi token, xử lý chạm thông báo theo `data.type` | — | NOTI | | C21 |
+| [x] | FE-41 | Màn hình thông báo + badge chưa đọc | S-08 | NOTI | | C23 |
+| [x] | FE-42 | Cài đặt nhắc lịch | S-09 | NOTI | | C22 |
+| [x] | FE-43 | Owner: Hôm nay + Timeline | O-03, O-10 | DB | | O08 |
+| [x] | FE-44 | Quét QR check-in | O-13 | DB | | O11 |
+| [x] | FE-45 | Chat AI: khung chat, gợi ý nhanh, thẻ sân "Đặt ngay" | C-13 | AI | | C24, C25 |
 
 ## Giai đoạn 2
 

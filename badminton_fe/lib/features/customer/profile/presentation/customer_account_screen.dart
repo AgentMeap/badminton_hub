@@ -5,6 +5,7 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../notifications/presentation/notification_screens.dart';
 
 /// FE-33: Man hinh C-14 Tai khoan Customer:
 /// - Avatar, ten, email, so dien thoai, badge hoi vien
@@ -185,11 +186,13 @@ class CustomerAccountScreen extends StatelessWidget {
                   icon: Icons.notifications_none_rounded,
                   title: 'Cài đặt thông báo & Nhắc lịch (S-09)',
                   subtitle: 'Nhắc lịch trước 2 giờ, thông báo khuyến mãi',
-                  onTap: () => _showFeaturePreview(
-                    context,
-                    'S-09 Cài đặt thông báo',
-                    'Cấu hình nhận thông báo push FCM nhắc lịch trước giờ chơi, biến động đặt chỗ và mã giảm giá mới.',
-                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const NotificationSettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const Divider(height: 1),
                 _buildMenuItem(

@@ -3,21 +3,18 @@ import 'package:flutter/material.dart';
 import '../../features/admin/presentation/admin_approval_screens.dart';
 import '../../features/auth/presentation/auth_flow_screens.dart';
 import '../../features/customer/booking/presentation/my_bookings_screen.dart';
+import '../../features/customer/chat_ai/presentation/customer_ai_chat_screen.dart';
 import '../../features/customer/home_map/presentation/customer_explore_screen.dart';
 import '../../features/customer/profile/presentation/customer_account_screen.dart';
-import '../../features/customer/venue/data/fake_venue_repository.dart';
+import '../../features/notifications/presentation/notification_screens.dart';
+import '../../features/owner/operations/presentation/owner_operations_screens.dart';
 import '../../features/owner/venue_manage/presentation/owner_venue_screens.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/async_view.dart';
 import '../widgets/confirm_dialog.dart';
-import '../widgets/otp_input.dart';
 import '../widgets/price_text.dart';
-import '../widgets/slot_grid.dart';
 import '../widgets/status_chip.dart';
-import '../widgets/venue_card.dart';
 
 /// 3 vai tro tach biet theo 01-kien-truc.md: CUSTOMER / OWNER / ADMIN.
 enum UserRole {
@@ -357,8 +354,8 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
   }
 }
 
-/// Shell giao dien cua CUSTOMER (C-01, C-05, C-09, C-14, Design System Harness).
-class CustomerShellView extends StatefulWidget {
+/// Shell giao dien cua CUSTOMER (C-01, C-09, C-13, S-08, C-14).
+class CustomerShellView extends StatelessWidget {
   final int tabIndex;
   final ValueChanged<int>? onSelectTab;
   final ValueChanged<UserRole>? onSwitchRole;
@@ -371,346 +368,45 @@ class CustomerShellView extends StatefulWidget {
   });
 
   @override
-  State<CustomerShellView> createState() => _CustomerShellViewState();
-}
-
-class _CustomerShellViewState extends State<CustomerShellView> {
-  final FakeVenueRepository _repo = const FakeVenueRepository();
-  late final Map<String, CourtSlotCell> _slots;
-  final Set<String> _selectedSlotKeys = {'C1_19', 'C2_18'};
-  AsyncStatus _demoAsyncStatus = AsyncStatus.data;
-  bool _showEmptyDemo = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _slots = _repo.getSampleSlotMatrix();
-  }
-
-  int get _selectedTotalVnd {
-    int sum = 0;
-    for (final key in _selectedSlotKeys) {
-      final cell = _slots[key];
-      if (cell != null) sum += cell.priceVnd;
-    }
-    return sum;
-  }
-
-  void _toggleSlot(CourtSlotCell cell) {
-    setState(() {
-      if (_selectedSlotKeys.contains(cell.key)) {
-        _selectedSlotKeys.remove(cell.key);
-      } else {
-        _selectedSlotKeys.add(cell.key);
-      }
-    });
-  }
-
-  AsyncState<List<VenueSummaryItem>> _buildCurrentAsyncState() {
-    switch (_demoAsyncStatus) {
-      case AsyncStatus.loading:
-        return const AsyncState.loading();
-      case AsyncStatus.error:
-        return const AsyncState.error(AppStrings.errSlotTaken);
-      case AsyncStatus.data:
-        return AsyncState.data(
-          _showEmptyDemo ? const [] : _repo.getSampleVenues(),
+  Widget build(BuildContext context) {
+    switch (tabIndex) {
+      case 0:
+        return const CustomerExploreScreen();
+      case 1:
+        return MyBookingsScreen(
+          onExploreTap: () => onSelectTab?.call(0),
+        );
+      case 2:
+        return const CustomerAiChatScreen();
+      case 3:
+        return const NotificationsCenterScreen();
+      case 4:
+      default:
+        return CustomerAccountScreen(
+          onSwitchRole: onSwitchRole,
         );
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    final textTheme = Theme.of(context).textTheme;
-
-    if (widget.tabIndex == 0) {
-      return const CustomerExploreScreen();
-    }
-    if (widget.tabIndex == 1) {
-      return MyBookingsScreen(
-        onExploreTap: () => widget.onSelectTab?.call(0),
-      );
-    }
-    if (widget.tabIndex == 2) {
-      return _buildSlotBookingTab(context);
-    }
-    if (widget.tabIndex == 3) {
-      return _buildComponentShowcaseTab(context);
-    }
-    if (widget.tabIndex == 4) {
-      return CustomerAccountScreen(
-        onSwitchRole: widget.onSwitchRole,
-      );
-    }
-
-    return ListView(
-      padding: EdgeInsets.all(t.space4),
-      children: [
-        // Hero Focal Point: Tieu de lon >= 2.5x body + Tong tien tam tinh
-        Container(
-          padding: EdgeInsets.all(t.space6),
-          decoration: BoxDecoration(
-            color: t.surfaceCard,
-            borderRadius: BorderRadius.circular(t.radiusCard),
-            border: Border.all(color: t.borderSubtle, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const StatusChip(
-                status: CourtBookingStatus.activeConfirmed,
-                customLabel: 'C-01 Khám phá sân gần bạn',
-              ),
-              SizedBox(height: t.space3),
-              Text(
-                'Đặt sân cầu lông trong 30 giây',
-                style: textTheme.displaySmall,
-              ),
-              SizedBox(height: t.space2),
-              Text(
-                'Chọn cơ sở sân đạt chuẩn thảm PVC, xem giờ trống theo thời gian thực và nhận mã QR check-in ngay.',
-                style: textTheme.bodyMedium,
-              ),
-              SizedBox(height: t.space4),
-              // Bo chuyen thu 4 trang thai AsyncView (Data / Loading / Empty / Error)
-              Wrap(
-                spacing: t.space2,
-                runSpacing: t.space2,
-                children: [
-                  _StateFilterButton(
-                    label: 'Có dữ liệu (Data)',
-                    active: _demoAsyncStatus == AsyncStatus.data &&
-                        !_showEmptyDemo,
-                    onTap: () => setState(() {
-                      _demoAsyncStatus = AsyncStatus.data;
-                      _showEmptyDemo = false;
-                    }),
-                  ),
-                  _StateFilterButton(
-                    label: 'Đang tải (Loading)',
-                    active: _demoAsyncStatus == AsyncStatus.loading,
-                    onTap: () => setState(() {
-                      _demoAsyncStatus = AsyncStatus.loading;
-                    }),
-                  ),
-                  _StateFilterButton(
-                    label: 'Trống (Empty)',
-                    active: _demoAsyncStatus == AsyncStatus.data &&
-                        _showEmptyDemo,
-                    onTap: () => setState(() {
-                      _demoAsyncStatus = AsyncStatus.data;
-                      _showEmptyDemo = true;
-                    }),
-                  ),
-                  _StateFilterButton(
-                    label: 'Lỗi 409 (Error)',
-                    active: _demoAsyncStatus == AsyncStatus.error,
-                    onTap: () => setState(() {
-                      _demoAsyncStatus = AsyncStatus.error;
-                    }),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: t.space6),
-        AsyncView<List<VenueSummaryItem>>(
-          state: _buildCurrentAsyncState(),
-          isEmpty: (list) => list.isEmpty,
-          emptyTitle: 'Không tìm thấy sân phù hợp',
-          emptyDescription:
-              'Bạn hãy mở rộng bán kính tìm kiếm hoặc chọn khung giờ khác.',
-          onRetry: () => setState(() {
-            _demoAsyncStatus = AsyncStatus.data;
-            _showEmptyDemo = false;
-          }),
-          builder: (ctx, venues) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sân đề xuất quanh vị trí của bạn (${venues.length})',
-                style: textTheme.titleLarge,
-              ),
-              SizedBox(height: t.space3),
-              ...venues.map(
-                (v) => Padding(
-                  padding: EdgeInsets.only(bottom: t.space4),
-                  child: VenueCard(
-                    venue: v,
-                    onTap: () {},
-                    onBookQuick: v.availableCourtCount > 0 ? () {} : null,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSlotBookingTab(BuildContext context) {
-    final t = context.tokens;
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListView(
-      padding: EdgeInsets.all(t.space4),
-      children: [
-        Text(
-          'C-05 Chọn khung giờ (SlotGrid)',
-          style: textTheme.headlineSmall,
-        ),
-        SizedBox(height: t.space1),
-        Text(
-          'Chạm vào các ô màu xanh (Còn trống) để chọn hoặc bỏ chọn khung giờ đặt sân.',
-          style: textTheme.bodyMedium,
-        ),
-        SizedBox(height: t.space4),
-        Container(
-          padding: EdgeInsets.all(t.space4),
-          decoration: BoxDecoration(
-            color: t.surfaceCard,
-            borderRadius: BorderRadius.circular(t.radiusCard),
-            border: Border.all(color: t.borderSubtle),
-          ),
-          child: SlotGrid(
-            courtNames: FakeVenueRepository.sampleCourtNames,
-            hours: FakeVenueRepository.sampleHours,
-            cells: _slots,
-            selectedKeys: _selectedSlotKeys,
-            onToggleSlot: _toggleSlot,
-          ),
-        ),
-        SizedBox(height: t.space6),
-        Container(
-          padding: EdgeInsets.all(t.space4),
-          decoration: BoxDecoration(
-            color: t.surfaceCard,
-            borderRadius: BorderRadius.circular(t.radiusCard),
-            border: Border.all(color: t.borderSubtle),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Đã chọn ${_selectedSlotKeys.length} khung giờ',
-                    style: textTheme.bodyMedium,
-                  ),
-                  PriceText(
-                    amountVnd: _selectedTotalVnd,
-                    isHero: true,
-                  ),
-                ],
-              ),
-              AppButton(
-                label: AppStrings.actionConfirmPayment,
-                onPressed: _selectedSlotKeys.isEmpty ? null : () {},
-                variant: AppButtonVariant.primary,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComponentShowcaseTab(BuildContext context) {
-    final t = context.tokens;
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListView(
-      padding: EdgeInsets.all(t.space4),
-      children: [
-        Text(
-          'Sprint 0 Component Kit (FE-03 & FE-04)',
-          style: textTheme.headlineSmall,
-        ),
-        SizedBox(height: t.space4),
-        const AppTextField(
-          label: 'Số điện thoại hoặc Email',
-          hintText: 'Nhập email đăng ký tài khoản',
-          prefixIcon: Icons.mail_outline_rounded,
-        ),
-        SizedBox(height: t.space3),
-        const AppTextField(
-          label: 'Mật khẩu',
-          hintText: 'Nhập tối thiểu 8 ký tự',
-          isPassword: true,
-          prefixIcon: Icons.lock_outline_rounded,
-        ),
-        SizedBox(height: t.space6),
-        Text('Mã xác thực OTP 6 số (S-04)', style: textTheme.titleMedium),
-        SizedBox(height: t.space2),
-        OtpInput(
-          onCompleted: (_) {},
-          onResend: () {},
-        ),
-        SizedBox(height: t.space6),
-        Text(
-          'Các biến thể AppButton & Token-by-Intent',
-          style: textTheme.titleMedium,
-        ),
-        SizedBox(height: t.space3),
-        Wrap(
-          spacing: t.space2,
-          runSpacing: t.space2,
-          children: [
-            AppButton(
-              label: AppStrings.actionBookNow,
-              onPressed: () {},
-              variant: AppButtonVariant.primary,
-            ),
-            AppButton(
-              label: 'Đang giữ chỗ...',
-              onPressed: () {},
-              loading: true,
-              variant: AppButtonVariant.primary,
-            ),
-            AppButton(
-              label: AppStrings.actionFilter,
-              onPressed: () {},
-              variant: AppButtonVariant.secondary,
-            ),
-            AppButton(
-              label: AppStrings.actionCancelBooking,
-              leadingIcon: Icons.delete_outline_rounded,
-              variant: AppButtonVariant.danger,
-              onPressed: () {
-                ConfirmDialog.show(
-                  context,
-                  title: 'Xác nhận hủy lượt đặt sân?',
-                  message:
-                      'Thao tác này không thể hoàn tác. Tiền hoàn sẽ được tính theo chính sách hủy của sân.',
-                  confirmLabel: AppStrings.actionCancelBooking,
-                  isDestructive: true,
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
-/// Shell giao dien cua COURT OWNER (O-03 Hom nay, O-10 Timeline, Doanh thu).
+/// Shell giao dien cua COURT OWNER (O-03 Hom nay, O-10 Timeline, O-04 Co so san, S-08 Thong bao).
 class OwnerShellView extends StatelessWidget {
   final int tabIndex;
   const OwnerShellView({super.key, required this.tabIndex});
 
   @override
   Widget build(BuildContext context) {
+    if (tabIndex == 0) {
+      return const OwnerOperationsTodayScreen();
+    }
     if (tabIndex == 1) {
       return const OwnerVenueListView();
     }
+    if (tabIndex == 3) {
+      return const NotificationsCenterScreen();
+    }
     final t = context.tokens;
     final textTheme = Theme.of(context).textTheme;
-    final repo = const FakeVenueRepository();
 
     return ListView(
       padding: EdgeInsets.all(t.space4),
@@ -727,56 +423,18 @@ class OwnerShellView extends StatelessWidget {
             children: [
               const StatusChip(
                 status: CourtBookingStatus.completedOrCheckedIn,
-                customLabel: 'O-03 Vận hành hôm nay',
+                customLabel: 'O-14 Báo cáo doanh thu & Đối soát PayOS',
               ),
               SizedBox(height: t.space3),
-              Text('Doanh thu tạm tính hôm nay', style: textTheme.bodyMedium),
+              Text('Tổng doanh thu tháng 10/2026', style: textTheme.bodyMedium),
               SizedBox(height: t.space1),
-              const PriceText(amountVnd: 6850000, isHero: true),
-              SizedBox(height: t.space4),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      label: 'Quét QR Check-in (O-13)',
-                      leadingIcon: Icons.qr_code_scanner_rounded,
-                      onPressed: () {},
-                      variant: AppButtonVariant.primary,
-                    ),
-                  ),
-                  SizedBox(width: t.space2),
-                  Expanded(
-                    child: AppButton(
-                      label: 'Đặt thủ công (O-12)',
-                      leadingIcon: Icons.add_circle_outline_rounded,
-                      onPressed: () {},
-                      variant: AppButtonVariant.secondary,
-                    ),
-                  ),
-                ],
+              const PriceText(amountVnd: 42850000, isHero: true),
+              SizedBox(height: t.space3),
+              Text(
+                'Phí nền tảng (5%): 2.142.500đ | Thực nhận về MBBank: 40.707.500đ',
+                style: textTheme.bodySmall,
               ),
             ],
-          ),
-        ),
-        SizedBox(height: t.space6),
-        Text(
-          'O-10 Lưới lịch sân theo thời gian thực',
-          style: textTheme.titleLarge,
-        ),
-        SizedBox(height: t.space3),
-        Container(
-          padding: EdgeInsets.all(t.space4),
-          decoration: BoxDecoration(
-            color: t.surfaceCard,
-            borderRadius: BorderRadius.circular(t.radiusCard),
-            border: Border.all(color: t.borderSubtle),
-          ),
-          child: SlotGrid(
-            courtNames: FakeVenueRepository.sampleCourtNames,
-            hours: FakeVenueRepository.sampleHours,
-            cells: repo.getSampleSlotMatrix(),
-            selectedKeys: const {},
-            onToggleSlot: (_) {},
           ),
         ),
       ],
@@ -884,60 +542,6 @@ class AdminShellView extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StateFilterButton extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _StateFilterButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    return InkWell(
-      borderRadius: BorderRadius.circular(t.radiusControl),
-      onTap: onTap,
-      child: Container(
-        constraints: BoxConstraints(minHeight: t.minTapTarget),
-        padding: EdgeInsets.symmetric(
-          horizontal: t.space3,
-          vertical: t.space2,
-        ),
-        decoration: BoxDecoration(
-          color: active ? t.statusActive.background : t.surfaceMuted,
-          borderRadius: BorderRadius.circular(t.radiusControl),
-          border: Border.all(
-            color: active ? t.actionPrimary : t.borderSubtle,
-            width: active ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              active ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 16,
-              color: active ? t.statusActive.foreground : t.textSecondary,
-            ),
-            SizedBox(width: t.space1),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: active ? t.statusActive.foreground : t.textPrimary,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                  ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
