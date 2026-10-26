@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../features/auth/presentation/auth_flow_screens.dart';
 import '../../features/customer/venue/data/fake_venue_repository.dart';
+import '../../features/owner/venue_manage/presentation/owner_venue_screens.dart';
 import '../l10n/app_strings.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
@@ -237,6 +239,28 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
           ),
         ),
         actions: [
+          AppButton(
+            label: 'Đăng nhập (S-02)',
+            leadingIcon: Icons.login_rounded,
+            variant: AppButtonVariant.secondary,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => LoginScreen(
+                    onLoginSuccess: (role) {
+                      Navigator.of(context).popUntil((r) => r.isFirst);
+                      _switchRole(role);
+                    },
+                    onOpenOwnerStatus: () {
+                      Navigator.of(context).popUntil((r) => r.isFirst);
+                      _switchRole(UserRole.owner);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          SizedBox(width: t.space1),
           IconButton(
             tooltip: isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối',
             constraints: BoxConstraints(
@@ -652,6 +676,9 @@ class OwnerShellView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (tabIndex == 1) {
+      return const OwnerVenueListView();
+    }
     final t = context.tokens;
     final textTheme = Theme.of(context).textTheme;
     final repo = const FakeVenueRepository();
