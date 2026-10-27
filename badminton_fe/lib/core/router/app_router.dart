@@ -187,6 +187,23 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
     }
   }
 
+  void _openLogin() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LoginScreen(
+          onLoginSuccess: (role) {
+            Navigator.of(context).popUntil((r) => r.isFirst);
+            _switchRole(role);
+          },
+          onOpenOwnerStatus: () {
+            Navigator.of(context).popUntil((r) => r.isFirst);
+            _switchRole(UserRole.owner);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
@@ -225,12 +242,16 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
                   children: [
                     Text(
                       'Badminton Court',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                     ),
                     Text(
                       'Shell: ${_currentRole.label} (${_currentRole.basePath})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ],
@@ -240,27 +261,24 @@ class _AppRoleShellHostState extends State<AppRoleShellHost> {
           ),
         ),
         actions: [
-          AppButton(
-            label: 'Đăng nhập (S-02)',
-            leadingIcon: Icons.login_rounded,
-            variant: AppButtonVariant.secondary,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => LoginScreen(
-                    onLoginSuccess: (role) {
-                      Navigator.of(context).popUntil((r) => r.isFirst);
-                      _switchRole(role);
-                    },
-                    onOpenOwnerStatus: () {
-                      Navigator.of(context).popUntil((r) => r.isFirst);
-                      _switchRole(UserRole.owner);
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
+          // Man hinh hep (dien thoai): chi hien icon de nhuong cho tieu de
+          if (MediaQuery.sizeOf(context).width < 600)
+            IconButton(
+              tooltip: 'Đăng nhập (S-02)',
+              constraints: BoxConstraints(
+                minWidth: t.minTapTarget,
+                minHeight: t.minTapTarget,
+              ),
+              onPressed: _openLogin,
+              icon: const Icon(Icons.login_rounded),
+            )
+          else
+            AppButton(
+              label: 'Đăng nhập (S-02)',
+              leadingIcon: Icons.login_rounded,
+              variant: AppButtonVariant.secondary,
+              onPressed: _openLogin,
+            ),
           SizedBox(width: t.space1),
           IconButton(
             tooltip: isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối',
@@ -513,8 +531,10 @@ class AdminShellView extends StatelessWidget {
                 style: textTheme.bodyMedium,
               ),
               SizedBox(height: t.space4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: t.space2,
+                runSpacing: t.space2,
                 children: [
                   AppButton(
                     label: 'Yêu cầu chỉnh sửa',
@@ -530,7 +550,6 @@ class AdminShellView extends StatelessWidget {
                       );
                     },
                   ),
-                  SizedBox(width: t.space2),
                   AppButton(
                     label: 'Phê duyệt lên bản đồ',
                     variant: AppButtonVariant.primary,

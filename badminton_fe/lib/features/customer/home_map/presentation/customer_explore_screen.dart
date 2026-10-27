@@ -427,13 +427,17 @@ class _CustomerExploreScreenState extends State<CustomerExploreScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    StatusChip(
-                      status: selectedDetail.summary.status,
-                      customLabel: selectedDetail.summary.availableCourtCount > 0
-                          ? 'Còn ${selectedDetail.summary.availableCourtCount} sân trống'
-                          : 'Hết giờ trống',
+                    Flexible(
+                      child: StatusChip(
+                        status: selectedDetail.summary.status,
+                        customLabel: selectedDetail.summary.availableCourtCount > 0
+                            ? 'Còn ${selectedDetail.summary.availableCourtCount} sân trống'
+                            : 'Hết giờ trống',
+                      ),
                     ),
+                    SizedBox(width: t.space2),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.star_rounded,
@@ -455,6 +459,8 @@ class _CustomerExploreScreenState extends State<CustomerExploreScreen> {
                 Text(
                   selectedDetail.summary.name,
                   style: textTheme.titleLarge,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: t.space1),
                 Text(
@@ -465,36 +471,37 @@ class _CustomerExploreScreenState extends State<CustomerExploreScreen> {
                 ),
                 SizedBox(height: t.space3),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Giá từ', style: textTheme.labelSmall),
-                        PriceText(
-                          amountVnd: selectedDetail.summary.minPricePerHour,
-                          suffix: '/giờ',
-                        ),
-                      ],
+                    Text('Giá từ ', style: textTheme.labelSmall),
+                    PriceText(
+                      amountVnd: selectedDetail.summary.minPricePerHour,
+                      suffix: '/giờ',
                     ),
-                    Row(
-                      children: [
-                        AppButton(
-                          label: 'Chi tiết (C-03)',
-                          variant: AppButtonVariant.secondary,
-                          onPressed: () => _openVenueDetail(selectedDetail),
-                        ),
-                        SizedBox(width: t.space2),
-                        AppButton(
-                          label: 'Chọn giờ (C-05)',
-                          variant: AppButtonVariant.primary,
-                          onPressed: selectedDetail
-                                      .summary.availableCourtCount >
-                                  0
-                              ? () => _openSlotSelection(selectedDetail)
-                              : null,
-                        ),
-                      ],
+                  ],
+                ),
+                SizedBox(height: t.space2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppButton(
+                        label: 'Chi tiết (C-03)',
+                        variant: AppButtonVariant.secondary,
+                        onPressed: () => _openVenueDetail(selectedDetail),
+                      ),
+                    ),
+                    SizedBox(width: t.space2),
+                    Expanded(
+                      child: AppButton(
+                        label: 'Chọn giờ (C-05)',
+                        variant: AppButtonVariant.primary,
+                        onPressed: selectedDetail
+                                    .summary.availableCourtCount >
+                                0
+                            ? () => _openSlotSelection(selectedDetail)
+                            : null,
+                      ),
                     ),
                   ],
                 ),

@@ -687,8 +687,10 @@ class _OwnerOperationsTodayScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: t.space2,
+                runSpacing: t.space2,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const StatusChip(
                     status: CourtBookingStatus.completedOrCheckedIn,
@@ -704,23 +706,15 @@ class _OwnerOperationsTodayScreenState
                 ],
               ),
               SizedBox(height: t.space3),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Doanh thu đã thu hôm nay', style: textTheme.bodySmall),
-                      PriceText(amountVnd: _store.todayRevenueVnd, isHero: true),
-                    ],
-                  ),
-                  AppButton(
-                    label: 'Quét QR Check-in (O-13)',
-                    leadingIcon: Icons.qr_code_scanner_rounded,
-                    variant: AppButtonVariant.primary,
-                    onPressed: _openQrScanner,
-                  ),
-                ],
+              Text('Doanh thu đã thu hôm nay', style: textTheme.bodySmall),
+              PriceText(amountVnd: _store.todayRevenueVnd, isHero: true),
+              SizedBox(height: t.space3),
+              AppButton(
+                label: 'Quét QR Check-in (O-13)',
+                leadingIcon: Icons.qr_code_scanner_rounded,
+                variant: AppButtonVariant.primary,
+                expandWidth: true,
+                onPressed: _openQrScanner,
               ),
               SizedBox(height: t.space4),
 
@@ -781,14 +775,15 @@ class _OwnerOperationsTodayScreenState
                       onPressed: () => setState(() => _showTimelineMode = true),
                     ),
                   ),
-                  SizedBox(width: t.space2),
-                  AppButton(
-                    label: 'Đặt tại quầy (O-12)',
-                    leadingIcon: Icons.add_rounded,
-                    variant: AppButtonVariant.secondary,
-                    onPressed: () => _openManualBookingDialog(),
-                  ),
                 ],
+              ),
+              SizedBox(height: t.space2),
+              AppButton(
+                label: 'Đặt tại quầy (O-12)',
+                leadingIcon: Icons.add_rounded,
+                variant: AppButtonVariant.secondary,
+                expandWidth: true,
+                onPressed: () => _openManualBookingDialog(),
               ),
             ],
           ),
@@ -907,13 +902,16 @@ class _OwnerOperationsTodayScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${item.bookingCode} | ${item.courtName}',
-                    style: textTheme.labelMedium?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                      fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Text(
+                      '${item.bookingCode} | ${item.courtName}',
+                      style: textTheme.labelMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
+                  SizedBox(width: t.space2),
                   StatusChip(
                     status: item.status,
                     customLabel: _statusLabel(item.status),
@@ -942,25 +940,29 @@ class _OwnerOperationsTodayScreenState
                       ],
                     ),
                   ),
+                  SizedBox(width: t.space2),
                   PriceText(amountVnd: item.totalAmountVnd),
                 ],
               ),
               if (item.status == CourtBookingStatus.pending) ...[
                 SizedBox(height: t.space3),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    AppButton(
-                      label: 'Chi tiết / Từ chối',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: () => _openOwnerBookingDetailSheet(item),
+                    Expanded(
+                      child: AppButton(
+                        label: 'Chi tiết / Từ chối',
+                        variant: AppButtonVariant.secondary,
+                        onPressed: () => _openOwnerBookingDetailSheet(item),
+                      ),
                     ),
                     SizedBox(width: t.space2),
-                    AppButton(
-                      label: 'Xác nhận ngay',
-                      leadingIcon: Icons.check_rounded,
-                      variant: AppButtonVariant.primary,
-                      onPressed: () => _store.confirmBooking(item.id),
+                    Expanded(
+                      child: AppButton(
+                        label: 'Xác nhận ngay',
+                        leadingIcon: Icons.check_rounded,
+                        variant: AppButtonVariant.primary,
+                        onPressed: () => _store.confirmBooking(item.id),
+                      ),
                     ),
                   ],
                 ),

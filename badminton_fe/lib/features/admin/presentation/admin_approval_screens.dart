@@ -341,8 +341,10 @@ class _AdminApprovalCenterViewState extends State<AdminApprovalCenterView> {
                         ),
                       ],
                       SizedBox(height: t.space4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: t.space2,
+                        runSpacing: t.space2,
                         children: [
                           AppButton(
                             label: 'Từ chối (Bắt buộc lý do)',
@@ -365,7 +367,6 @@ class _AdminApprovalCenterViewState extends State<AdminApprovalCenterView> {
                               }
                             },
                           ),
-                          SizedBox(width: t.space2),
                           AppButton(
                             label: 'Duyệt Chủ sân',
                             variant: AppButtonVariant.primary,

@@ -593,6 +593,7 @@ class _CustomerAiChatScreenState extends State<CustomerAiChatScreen> {
                     ),
                   ),
                 ),
+                SizedBox(width: t.space2),
                 StatusChip(
                   status: s.availableCourtCount > 0
                       ? CourtBookingStatus.activeConfirmed
@@ -609,40 +610,40 @@ class _CustomerAiChatScreenState extends State<CustomerAiChatScreen> {
               style: textTheme.bodySmall,
             ),
             SizedBox(height: t.space2),
+            PriceText(
+              amountVnd: s.minPricePerHour,
+              suffix: '/giờ',
+            ),
+            SizedBox(height: t.space2),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                PriceText(
-                  amountVnd: s.minPricePerHour,
-                  suffix: '/giờ',
+                Expanded(
+                  child: AppButton(
+                    label: 'Chi tiết (C-03)',
+                    variant: AppButtonVariant.secondary,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => VenueDetailScreen(venue: venue),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-                Row(
-                  children: [
-                    AppButton(
-                      label: 'Chi tiết (C-03)',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => VenueDetailScreen(venue: venue),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(width: t.space2),
-                    AppButton(
-                      label: 'Đặt ngay (C-05)',
-                      leadingIcon: Icons.flash_on_rounded,
-                      variant: AppButtonVariant.primary,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => SlotSelectionScreen(venue: venue),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                SizedBox(width: t.space2),
+                Expanded(
+                  child: AppButton(
+                    label: 'Đặt ngay (C-05)',
+                    leadingIcon: Icons.flash_on_rounded,
+                    variant: AppButtonVariant.primary,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SlotSelectionScreen(venue: venue),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

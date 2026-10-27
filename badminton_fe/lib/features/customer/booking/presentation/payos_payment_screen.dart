@@ -372,8 +372,10 @@ class _PayOsPaymentScreenState extends State<PayOsPaymentScreen> {
                 ),
                 SizedBox(height: t.space3),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: t.space3,
+                  runSpacing: t.space2,
                   children: [
                     AppButton(
                       label: 'Tải ảnh QR',
@@ -387,7 +389,6 @@ class _PayOsPaymentScreenState extends State<PayOsPaymentScreen> {
                         );
                       },
                     ),
-                    SizedBox(width: t.space3),
                     AppButton(
                       label: 'Mở App Ngân hàng',
                       leadingIcon: Icons.open_in_new_rounded,

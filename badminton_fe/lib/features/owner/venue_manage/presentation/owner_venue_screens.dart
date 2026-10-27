@@ -79,29 +79,18 @@ class _OwnerVenueListViewState extends State<OwnerVenueListView> {
       padding: EdgeInsets.all(t.space4),
       children: [
         // Header + Nut them co so (O-05) & Xem ho so chu san (O-02)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('O-04 Cơ sở sân của tôi', style: textTheme.headlineSmall),
-                  SizedBox(height: t.space1),
-                  Text(
-                    'Quản lý thông tin, ghim bản đồ, sân con và bảng giá cho từng cơ sở.',
-                    style: textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: t.space3),
-            AppButton(
-              label: 'Thêm cơ sở (O-05)',
-              leadingIcon: Icons.add_rounded,
-              onPressed: () => _openCreateOrEdit(),
-            ),
-          ],
+        Text('O-04 Cơ sở sân của tôi', style: textTheme.headlineSmall),
+        SizedBox(height: t.space1),
+        Text(
+          'Quản lý thông tin, ghim bản đồ, sân con và bảng giá cho từng cơ sở.',
+          style: textTheme.bodyMedium,
+        ),
+        SizedBox(height: t.space3),
+        AppButton(
+          label: 'Thêm cơ sở (O-05)',
+          leadingIcon: Icons.add_rounded,
+          expandWidth: true,
+          onPressed: () => _openCreateOrEdit(),
         ),
         SizedBox(height: t.space3),
         Align(

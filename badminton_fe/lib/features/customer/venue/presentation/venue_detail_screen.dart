@@ -381,25 +381,30 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
             color: t.surfaceCard,
             border: Border(top: BorderSide(color: t.borderSubtle, width: 1)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('Giá thuê chỉ từ', style: textTheme.labelSmall),
-                  PriceText(
-                    amountVnd: v.summary.minPricePerHour,
-                    suffix: '/giờ',
-                    isHero: true,
+                  Text('Giá thuê chỉ từ ', style: textTheme.labelSmall),
+                  Flexible(
+                    child: PriceText(
+                      amountVnd: v.summary.minPricePerHour,
+                      suffix: '/giờ',
+                      isHero: true,
+                    ),
                   ),
                 ],
               ),
+              SizedBox(height: t.space2),
               AppButton(
                 label: 'Chọn khung giờ (C-05)',
                 leadingIcon: Icons.calendar_month_rounded,
                 variant: AppButtonVariant.primary,
+                expandWidth: true,
                 onPressed: v.summary.availableCourtCount > 0
                     ? _openSlotSelection
                     : null,
