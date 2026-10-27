@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../auth/data/auth_api_service.dart';
 import '../../../auth/data/auth_session_store.dart';
 import '../../../auth/presentation/auth_flow_screens.dart';
 
-/// FE-15: Man hinh O-01 Dang ky chu san (2 buoc: Thong tin ca nhan -> Ten co so & Giay phep <= 10 MB).
+/// FE-15: Man hinh O-01 Dang ky chu san (2 buoc: Thong tin ca nhan -> Ten co so & Giay phep <= 5 MB).
 class OwnerRegisterScreen extends StatefulWidget {
   final VoidCallback onSubmittedToStatus;
 
@@ -29,13 +32,17 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
   final TextEditingController _phoneCtrl =
       TextEditingController(text: '0909888777');
   final TextEditingController _passCtrl =
-      TextEditingController(text: 'Owner@2026');
+      TextEditingController(text: 'Owner1234');
   final TextEditingController _venueNameCtrl =
       TextEditingController(text: 'Cụm Sân Cầu Lông Phú Thọ Arena');
   final TextEditingController _taxCodeCtrl =
       TextEditingController(text: '0316892410');
+  final TextEditingController _addressCtrl =
+      TextEditingController(text: '219 Lý Thường Kiệt, Quận 11, TP.HCM');
 
-  String? _uploadedLicenseFile = 'giay_phep_kinh_doanh_san_cau_long.pdf (2.4 MB)';
+  String? _uploadedLicenseFile = 'giay_phep_kinh_doanh_san_cau_long.pdf';
+  bool _submitting = false;
+  String? _errorBanner;
 
   @override
   void dispose() {
@@ -45,28 +52,57 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
     _passCtrl.dispose();
     _venueNameCtrl.dispose();
     _taxCodeCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
-  void _submitOwnerRegistration() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => OtpVerificationScreen(
-          email: _emailCtrl.text.trim(),
-          purpose: OtpPurpose.verifyEmail,
-          onVerified: (_) {
-            Navigator.of(context).pop();
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(
-                builder: (_) => OwnerApplicationStatusScreen(
-                  onEnterOwnerShell: widget.onSubmittedToStatus,
+  Future<void> _submitOwnerRegistration() async {
+    setState(() {
+      _submitting = true;
+      _errorBanner = null;
+    });
+
+    try {
+      final challenge = await AuthApiService.instance.registerOwner(
+        fullName: _ownerNameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
+        password: _passCtrl.text,
+        businessName: _venueNameCtrl.text.trim(),
+        taxCode: _taxCodeCtrl.text.trim(),
+        address: _addressCtrl.text.trim(),
+        licenseFileName: _uploadedLicenseFile ?? 'giay_phep_kinh_doanh.pdf',
+      );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OtpVerificationScreen(
+            email: _emailCtrl.text.trim(),
+            role: UserRole.owner,
+            otpTicket: challenge.otpTicket,
+            purpose: OtpPurpose.verifyEmail,
+            onVerified: (_) {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) => OwnerApplicationStatusScreen(
+                    onEnterOwnerShell: widget.onSubmittedToStatus,
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _errorBanner = e.message;
+      });
+    }
   }
 
   @override
@@ -86,7 +122,6 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Thanh tien trinh 2 buoc
                 Row(
                   children: [
                     Expanded(
@@ -111,6 +146,25 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                   ],
                 ),
                 SizedBox(height: t.space4),
+
+                if (_errorBanner != null) ...[
+                  Container(
+                    padding: EdgeInsets.all(t.space3),
+                    decoration: BoxDecoration(
+                      color: t.statusCancelled.background,
+                      borderRadius: BorderRadius.circular(t.radiusControl),
+                      border: Border.all(color: t.statusCancelled.border),
+                    ),
+                    child: Text(
+                      _errorBanner!,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: t.statusCancelled.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: t.space4),
+                ],
 
                 if (_step == 1) ...[
                   Text(
@@ -168,8 +222,14 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                     prefixIcon: Icons.assignment_outlined,
                   ),
                   SizedBox(height: t.space4),
+                  AppTextField(
+                    label: 'Địa chỉ cơ sở',
+                    controller: _addressCtrl,
+                    prefixIcon: Icons.location_on_outlined,
+                  ),
+                  SizedBox(height: t.space4),
                   Text(
-                    'Giấy phép kinh doanh (PDF / JPG tối đa 10 MB)',
+                    'Giấy phép kinh doanh (PDF / JPG tối đa 5 MB)',
                     style: textTheme.labelLarge,
                   ),
                   SizedBox(height: t.space2),
@@ -201,7 +261,7 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                           onPressed: () {
                             setState(() {
                               _uploadedLicenseFile =
-                                  'giay_phep_ho_kinh_doanh_2026.pdf (1.8 MB)';
+                                  'giay_phep_ho_kinh_doanh_2026.pdf';
                             });
                           },
                         ),
@@ -223,6 +283,7 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                         child: AppButton(
                           label: 'Gửi hồ sơ & xác thực OTP',
                           variant: AppButtonVariant.primary,
+                          loading: _submitting,
                           onPressed: _uploadedLicenseFile != null
                               ? _submitOwnerRegistration
                               : null,
@@ -243,7 +304,7 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
 /// 3 trang thai ho so chu san O-02 theo 03-danh-sach-man-hinh.md.
 enum OwnerApplicationState { pending, rejected, approved }
 
-/// FE-15: Man hinh O-02 Trang thai ho so chu san (Cho duyet / Bi tu choi kem ly do + nop lai / Da duyet).
+/// FE-15: Man hinh O-02 Trang thai ho so chu san (dong bo tu GET /api/v1/owner/applications/latest).
 class OwnerApplicationStatusScreen extends StatefulWidget {
   final VoidCallback onEnterOwnerShell;
 
@@ -260,6 +321,33 @@ class OwnerApplicationStatusScreen extends StatefulWidget {
 class _OwnerApplicationStatusScreenState
     extends State<OwnerApplicationStatusScreen> {
   OwnerApplicationState _state = OwnerApplicationState.pending;
+  String? _rejectReasonFromServer;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromBackend();
+  }
+
+  Future<void> _syncFromBackend() async {
+    try {
+      final latest = await AuthApiService.instance.fetchLatestOwnerApplication();
+      if (!mounted || latest == null) return;
+      setState(() {
+        _rejectReasonFromServer = latest.rejectReason;
+        switch (latest.status.toUpperCase()) {
+          case 'APPROVED':
+            _state = OwnerApplicationState.approved;
+          case 'REJECTED':
+            _state = OwnerApplicationState.rejected;
+          default:
+            _state = OwnerApplicationState.pending;
+        }
+      });
+    } catch (_) {
+      // Giữ trạng thái mặc định khi chạy offline
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +370,10 @@ class _OwnerApplicationStatusScreenState
         chipStatus = CourtBookingStatus.cancelledOrSuspended;
         chipLabel = 'Cần bổ sung hồ sơ';
         headline = 'Hồ sơ đăng ký chủ sân bị từ chối';
-        body =
-            'Lý do từ Admin: Ảnh chụp giấy phép hộ kinh doanh bị mờ góc phải. Bạn hãy tải lại bản chụp rõ nét hơn và gửi lại.';
+        body = _rejectReasonFromServer != null &&
+                _rejectReasonFromServer!.isNotEmpty
+            ? 'Lý do từ Admin: $_rejectReasonFromServer'
+            : 'Lý do từ Admin: Ảnh chụp giấy phép hộ kinh doanh bị mờ góc phải. Bạn hãy tải lại bản chụp rõ nét hơn và gửi lại.';
       case OwnerApplicationState.approved:
         chipStatus = CourtBookingStatus.activeConfirmed;
         chipLabel = 'Đã phê duyệt chính thức';
@@ -302,7 +392,6 @@ class _OwnerApplicationStatusScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Bo chuyen nhanh 3 trang thai de test tren UI
                 Wrap(
                   spacing: t.space2,
                   runSpacing: t.space2,

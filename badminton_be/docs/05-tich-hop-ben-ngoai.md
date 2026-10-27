@@ -1,71 +1,49 @@
-# 05 – Tích hợp dịch vụ bên ngoài
+# 05 - Tích hợp dịch vụ bên ngoài
 
-Mọi khóa API đặt trong cấu hình, **không commit lên Git**. Mỗi tích hợp bọc sau một interface để có thể thay bằng bản giả (mock) khi chưa có khóa:
+Mọi khóa API và thông tin nhạy cảm đặt trong `application-local.properties` hoặc biến môi trường, **không commit lên Git**. Mỗi dịch vụ đều có chế độ fallback/dev-log để chạy kiểm thử local ngay cả khi chưa cấu hình khóa thật.
 
-```java
-public interface PaymentGatewayClient { String createPaymentUrl(Payment p); boolean verifySignature(Map<String,String> params); }
-public interface PushSender { void send(String fcmToken, String title, String body, Map<String,String> data); }
-public interface MailSender { void sendOtp(String to, String code, OtpPurpose purpose); }
-public interface AiClient { AiReply chat(List<ChatTurn> history, List<ToolDefinition> tools); }
-```
+## 1. PayOS - Cổng thanh toán VietQR (Chủ đề 3)
 
-## 1. VNPay sandbox (chủ đề 3)
-
-| Bước | Ai làm | Ghi chú |
+| Bước | Thành phần | Chi tiết xử lý |
 |---|---|---|
-| 1 | Đăng ký tài khoản sandbox VNPay | Nhận `vnp_TmnCode`, `vnp_HashSecret` |
-| 2 | App gọi `POST /customer/bookings/{id}/payments` | BE tạo `Payment(PENDING)`, ký tham số bằng HMAC-SHA512, trả `paymentUrl` |
-| 3 | App mở `paymentUrl` trong WebView | Người dùng nhập thẻ test của VNPay |
-| 4 | VNPay gọi **IPN** `GET /webhooks/vnpay/ipn` | BE kiểm tra chữ ký, số tiền, trạng thái; cập nhật `Payment` và `Booking` trong một transaction; trả `RspCode=00` |
-| 5 | VNPay chuyển trình duyệt về `return URL` | App bắt URL này trong WebView, đóng WebView, gọi `GET /customer/payments/{id}` để lấy trạng thái thật |
+| 1 | Cấu hình PayOS | Khai báo `app.payos.client-id`, `app.payos.api-key`, `app.payos.checksum-key` từ PayOS Dashboard |
+| 2 | Tạo link & mã VietQR | App gọi `POST /api/v1/customer/bookings/{id}/payments`; Backend tạo đơn thanh toán PayOS (`orderCode`, `amount`, `description`), ký dữ liệu bằng `HMAC-SHA256` và trả về mã VietQR động cùng thông tin tài khoản nhận |
+| 3 | Quét mã / Chuyển khoản 24/7 | Người dùng mở ứng dụng ngân hàng quét mã VietQR hoặc sao chép số tài khoản + nội dung chuyển khoản trên màn hình `C-08` |
+| 4 | Webhook đối soát tự động | PayOS gọi `POST /api/v1/webhooks/payos` ngay khi nhận tiền; Backend xác thực chữ ký `checksum`, cập nhật `Payment(PAID)` và `Booking(CONFIRMED)` trong một transaction idempotent |
 
-Lưu ý:
+## 2. Firebase Authentication & Firebase Cloud Messaging (Chủ đề 4, 5)
 
-- **Chỉ IPN được cập nhật trạng thái thanh toán.** Return URL có thể bị giả mạo.
-- IPN phải idempotent: VNPay có thể gọi lại nhiều lần.
-- Khi dev ở máy cá nhân, chạy `ngrok http 8080` và khai báo URL IPN của ngrok trong cổng sandbox.
+- Tạo Firebase Project trên Firebase Console, bật **Authentication** (Sign-in providers: **Email/Password** và **Google**) và **Cloud Messaging**.
+- Tải file JSON Service Account đặt ngoài thư mục mã nguồn và trỏ đường dẫn vào `app.firebase.service-account-path` trong `application-local.properties`.
+- [FirebaseAuthService.java](file:///d:/badminton/badminton_be/src/main/java/com/se183891/badminton_be/auth/service/FirebaseAuthService.java) đảm nhiệm 3 tác vụ:
+  1. `verifyGoogleIdToken(idToken)`: Xácминh Google ID Token khi người dùng đăng ký/đăng nhập qua Google (`POST /api/v1/auth/customer/google`).
+  2. `createVerifiedUserInFirebase(email, plainPassword, fullName)`: Tạo tài khoản chính thức trên Firebase Authentication (`emailVerified = true`) ngay sau khi người dùng nhập đúng mã OTP 6 số gửi qua SMTP (`POST /api/v1/auth/{actor}/verify-email`).
+  3. `updatePasswordInFirebase(firebaseUid, email, newPassword)`: Đồng bộ mật khẩu khi người dùng đặt lại mật khẩu (`POST /api/v1/auth/{actor}/reset-password`).
 
-## 2. Firebase Cloud Messaging (chủ đề 5)
+## 3. SMTP Gmail gửi OTP (Chủ đề 4)
 
-- Tạo Firebase project, thêm app Android, tải `google-services.json` cho FE.
-- BE dùng Firebase Admin SDK với file service account (đặt ngoài source, đường dẫn trong cấu hình).
-- Luồng: app đăng nhập → lấy FCM token → `POST /{actor}/device-tokens`. Sự kiện nghiệp vụ (đặt sân thành công…) → `NotificationService` lưu bảng `notification` **và** gửi push.
-- Payload `data` luôn có `type` và `targetId` (ví dụ `type=BOOKING`, `targetId=1024`) để app mở đúng màn hình khi người dùng chạm.
+- Bật xác minh 2 bước cho tài khoản Gmail gửi thư và tạo **App Password** (16 ký tự).
+- Cấu hình trong `application-local.properties`:
+  ```properties
+  spring.mail.host=smtp.gmail.com
+  spring.mail.port=587
+  spring.mail.username=your-email@gmail.com
+  spring.mail.password=YOUR_16_CHAR_APP_PASSWORD
+  app.mail.log-otp-to-console=true
+  ```
+- [MailSenderService.java](file:///d:/badminton/badminton_be/src/main/java/com/se183891/badminton_be/auth/service/MailSenderService.java) gửi email qua SMTP đồng thời in khung mã OTP 6 số ra Console log khi `app.mail.log-otp-to-console=true` để hỗ trợ kiểm thử nhanh.
 
-## 3. SMTP Gmail (chủ đề 4)
-
-- Bật xác minh 2 bước cho Gmail dùng gửi, tạo **App Password**.
-- `spring-boot-starter-mail`, host `smtp.gmail.com`, port 587, STARTTLS.
-- Gửi mail bất đồng bộ (`@Async`) để API không chờ SMTP.
-- Mẫu email (OTP, hóa đơn, cảnh báo) đặt trong `resources/templates/mail/`.
-
-## 4. Google Maps (chủ đề 2)
+## 4. Google Maps (Chủ đề 2)
 
 | Thành phần | Ai gọi | API của Google |
 |---|---|---|
-| Hiển thị bản đồ, marker | FE | Maps SDK for Android |
-| Đổi địa chỉ ↔ tọa độ | BE (`/public/geocode`) | Geocoding API (giấu key trên server) |
-| Chỉ đường | FE mở ứng dụng Google Maps qua URL `https://www.google.com/maps/dir/?api=1&destination=lat,lng` | Không cần key |
-| Tìm sân gần tôi | BE tự tính bằng Haversine | Không cần Google |
+| Hiển thị bản đồ, marker | FE (`badminton_fe`) | Maps SDK |
+| Đổi địa chỉ <-> tọa độ | BE (`/api/v1/public/geocode`) | Geocoding API (giấu key trên server) |
+| Chỉ đường | FE mở ứng dụng Google Maps qua URL | Không cần key |
+| Tìm sân gần tôi | BE tự tính bằng công thức Haversine | Không cần Google |
 
-Giới hạn API key theo package name + SHA-1 của app Android.
+## 5. Mô hình AI (Chủ đề 6)
 
-## 5. Mô hình AI (chủ đề 6)
-
-Chatbot dùng **function calling** để không bịa dữ liệu (US-C24):
-
-1. BE gửi câu hỏi của người dùng kèm danh sách *tool* mà AI được phép gọi:
-   - `search_venues(lat, lng, radiusKm, date, startTime, maxPrice)`
-   - `get_venue_policy(venueId)` (giờ mở cửa, chính sách hủy, FAQ)
-2. AI trả về yêu cầu gọi tool kèm tham số.
-3. BE chạy truy vấn thật trong DB, gửi kết quả lại cho AI.
-4. AI viết câu trả lời tiếng Việt; BE trả cho app cả câu trả lời **và** danh sách sân dạng cấu trúc để app vẽ nút "Đặt ngay".
-
-| Cấu hình (`ai_config`) | Ý nghĩa |
-|---|---|
-| `systemPrompt` | Vai trò: trợ lý đặt sân, chỉ trả lời về sân cầu lông và nền tảng |
-| `blockedTopics` | Chủ đề từ chối trả lời |
-| `dailyMessageLimit` | Giới hạn tin nhắn/ngày/người, kiểm soát chi phí |
-| `isEnabled` | Tắt chatbot khi cần |
-
-Trợ lý AI cho chủ sân (US-O18) dùng cùng cơ chế với tool `get_revenue(ownerId, from, to)`, `get_occupancy(venueId, from, to)`, trong đó `ownerId` lấy từ token chứ không lấy từ AI.
+Chatbot dùng **function calling** để tư vấn sân dựa trên dữ liệu thực trong SQLite:
+- `search_venues(lat, lng, radiusKm, date, startTime, maxPrice)`
+- `get_venue_policy(venueId)` (giờ mở cửa, chính sách hủy, FAQ)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -7,6 +8,7 @@ import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/otp_input.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../owner/onboarding/presentation/owner_onboarding_screens.dart';
+import '../data/auth_api_service.dart';
 import '../data/auth_session_store.dart';
 
 /// FE-11: Man hinh S-01 Splash kiem tra refresh token de vao thang Shell hoac S-02.
@@ -102,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-/// FE-11: Man hinh S-02 Dang nhap (chon Nguoi choi / Chu san, 5-tap logo cho Admin).
+/// FE-11: Man hinh S-02 Dang nhap RBAC (chon Nguoi choi / Chu san, 5-tap logo cho Admin).
 class LoginScreen extends StatefulWidget {
   final ValueChanged<UserRole> onLoginSuccess;
   final VoidCallback onOpenOwnerStatus;
@@ -123,13 +125,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _adminUnlocked = false;
   bool _requireOtpDevice = false;
   bool _loading = false;
+  bool _googleLoading = false;
 
   final TextEditingController _emailCtrl =
-      TextEditingController(text: 'huuda@gmail.com');
+      TextEditingController(text: 'customer@badminton.vn');
   final TextEditingController _passCtrl =
-      TextEditingController(text: 'Badminton@2026');
+      TextEditingController(text: 'Badminton123');
   String? _emailError;
   String? _passError;
+  String? _bannerError;
 
   @override
   void dispose() {
@@ -138,13 +142,33 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _selectRole(UserRole role) {
+    setState(() {
+      _selectedRole = role;
+      _bannerError = null;
+      final currentEmail = _emailCtrl.text.trim();
+      if (currentEmail == 'customer@badminton.vn' ||
+          currentEmail == 'owner@badminton.vn' ||
+          currentEmail == 'admin@badminton.vn') {
+        switch (role) {
+          case UserRole.customer:
+            _emailCtrl.text = 'customer@badminton.vn';
+          case UserRole.owner:
+            _emailCtrl.text = 'owner@badminton.vn';
+          case UserRole.admin:
+            _emailCtrl.text = 'admin@badminton.vn';
+        }
+      }
+    });
+  }
+
   void _handleLogoTap() {
     _logoTapCount += 1;
     if (_logoTapCount >= 5 && !_adminUnlocked) {
       setState(() {
         _adminUnlocked = true;
-        _selectedRole = UserRole.admin;
       });
+      _selectRole(UserRole.admin);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã bật cổng đăng nhập Quản trị viên (Admin).'),
@@ -153,10 +177,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _submitLogin() {
+  Future<void> _submitLogin() async {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
     setState(() {
+      _bannerError = null;
       _emailError =
           email.contains('@') ? null : 'Email không hợp lệ. Ví dụ: ten@gmail.com';
       _passError =
@@ -164,29 +189,83 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if (_emailError != null || _passError != null) return;
 
-    // Theo 04-luong-dieu-huong.md: Thiet bi la hoac Owner/Admin -> qua S-04 OTP
-    if (_requireOtpDevice || _selectedRole != UserRole.customer) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => OtpVerificationScreen(
-            email: email,
-            purpose: OtpPurpose.login2fa,
-            onVerified: (_) {
-              Navigator.of(context).pop();
-              widget.onLoginSuccess(_selectedRole);
-            },
+    setState(() => _loading = true);
+    try {
+      final decision = await AuthApiService.instance.login(
+        role: _selectedRole,
+        email: email,
+        password: pass,
+        simulateUntrustedDevice: _requireOtpDevice,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      if (decision.otpRequired) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => OtpVerificationScreen(
+              email: email,
+              role: _selectedRole,
+              otpTicket: decision.otpChallenge?.otpTicket,
+              purpose: OtpPurpose.login2fa,
+              onVerified: (_) {
+                Navigator.of(context).pop();
+                _completePostLoginNavigation();
+              },
+            ),
+          ),
+        );
+        return;
+      }
+
+      _completePostLoginNavigation();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _bannerError = e.message;
+      });
+    }
+  }
+
+  void _completePostLoginNavigation() {
+    final appStatus = AuthSessionStore.instance.ownerApplicationStatus;
+    if (_selectedRole == UserRole.owner &&
+        appStatus != null &&
+        appStatus != 'APPROVED') {
+      widget.onOpenOwnerStatus();
+      return;
+    }
+    widget.onLoginSuccess(_selectedRole);
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _googleLoading = true;
+      _bannerError = null;
+    });
+    try {
+      final profile = await AuthApiService.instance.signInWithGoogleFirebase(
+        email: 'google.player@gmail.com',
+        fullName: 'Người chơi Google Firebase',
+      );
+      if (!mounted) return;
+      setState(() => _googleLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đăng nhập Google (Firebase UID: ${profile.firebaseUid ?? "đã đồng bộ"}) thành công.',
           ),
         ),
       );
-      return;
-    }
-
-    setState(() => _loading = true);
-    Future<void>.delayed(const Duration(milliseconds: 350), () {
+      widget.onLoginSuccess(UserRole.customer);
+    } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
-      widget.onLoginSuccess(_selectedRole);
-    });
+      setState(() {
+        _googleLoading = false;
+        _bannerError = e.message;
+      });
+    }
   }
 
   @override
@@ -206,7 +285,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo ho tro cham 5 lan de mo khoa Admin (01-kien-truc.md)
                 GestureDetector(
                   onTap: _handleLogoTap,
                   behavior: HitTestBehavior.opaque,
@@ -246,8 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: t.space6),
 
-                // Chon vai tro: Toi la nguoi choi / Toi la chu san (+ Admin khi mo khoa)
-                Text('Chọn vai trò đăng nhập', style: textTheme.labelLarge),
+                Text('Chọn vai trò đăng nhập (RBAC)', style: textTheme.labelLarge),
                 SizedBox(height: t.space2),
                 Wrap(
                   spacing: t.space2,
@@ -257,27 +334,55 @@ class _LoginScreenState extends State<LoginScreen> {
                       label: 'Tôi là người chơi',
                       icon: Icons.person_outline_rounded,
                       selected: _selectedRole == UserRole.customer,
-                      onTap: () =>
-                          setState(() => _selectedRole = UserRole.customer),
+                      onTap: () => _selectRole(UserRole.customer),
                     ),
                     _RoleSegmentButton(
                       label: 'Tôi là chủ sân',
                       icon: Icons.stadium_outlined,
                       selected: _selectedRole == UserRole.owner,
-                      onTap: () =>
-                          setState(() => _selectedRole = UserRole.owner),
+                      onTap: () => _selectRole(UserRole.owner),
                     ),
                     if (_adminUnlocked)
                       _RoleSegmentButton(
                         label: 'Quản trị viên (Admin)',
                         icon: Icons.admin_panel_settings_outlined,
                         selected: _selectedRole == UserRole.admin,
-                        onTap: () =>
-                            setState(() => _selectedRole = UserRole.admin),
+                        onTap: () => _selectRole(UserRole.admin),
                       ),
                   ],
                 ),
                 SizedBox(height: t.space6),
+
+                if (_bannerError != null) ...[
+                  Container(
+                    padding: EdgeInsets.all(t.space3),
+                    decoration: BoxDecoration(
+                      color: t.statusCancelled.background,
+                      borderRadius: BorderRadius.circular(t.radiusControl),
+                      border: Border.all(color: t.statusCancelled.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: t.statusCancelled.foreground,
+                          size: 20,
+                        ),
+                        SizedBox(width: t.space2),
+                        Expanded(
+                          child: Text(
+                            _bannerError!,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: t.statusCancelled.foreground,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: t.space4),
+                ],
 
                 AppTextField(
                   label: 'Email đăng nhập',
@@ -298,7 +403,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: t.space2),
 
-                // Tuy chon mo phong thiet bi la de test luong S-04 OTP
                 Row(
                   children: [
                     Checkbox(
@@ -326,6 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         MaterialPageRoute<void>(
                           builder: (_) => ForgotPasswordScreen(
                             initialEmail: _emailCtrl.text.trim(),
+                            role: _selectedRole,
                           ),
                         ),
                       );
@@ -345,11 +450,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (_selectedRole == UserRole.customer) ...[
                   SizedBox(height: t.space3),
                   AppButton(
-                    label: 'Tiếp tục với Google',
+                    label: 'Tiếp tục với Google (Firebase Auth)',
                     leadingIcon: Icons.account_circle_outlined,
                     expandWidth: true,
+                    loading: _googleLoading,
                     variant: AppButtonVariant.secondary,
-                    onPressed: () => widget.onLoginSuccess(UserRole.customer),
+                    onPressed: _handleGoogleSignIn,
                   ),
                 ],
 
@@ -357,7 +463,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Divider(),
                 SizedBox(height: t.space4),
 
-                // Link Dang ky theo vai tro (S-03 hoac O-01/O-02)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -404,7 +509,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-/// FE-12: Man hinh S-03 Dang ky Customer voi thanh do do manh mat khau & validate AC.
+/// FE-12: Man hinh S-03 Dang ky Customer (2 loai: Google Firebase Auth & Dang ky thuong + OTP SMTP).
 class CustomerRegisterScreen extends StatefulWidget {
   final VoidCallback onRegistered;
 
@@ -429,6 +534,9 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   String? _phoneErr;
   String? _passErr;
   String? _confirmErr;
+  String? _apiErrorBanner;
+  bool _submitting = false;
+  bool _googleSubmitting = false;
 
   @override
   void dispose() {
@@ -440,7 +548,44 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _registerViaGoogleFirebase() async {
+    setState(() {
+      _googleSubmitting = true;
+      _apiErrorBanner = null;
+    });
+    try {
+      final email = _emailCtrl.text.trim().contains('@')
+          ? _emailCtrl.text.trim()
+          : 'google.newuser@gmail.com';
+      final name = _nameCtrl.text.trim().length >= 2
+          ? _nameCtrl.text.trim()
+          : 'Khách hàng Google Firebase';
+
+      final profile = await AuthApiService.instance.signInWithGoogleFirebase(
+        email: email,
+        fullName: name,
+      );
+      if (!mounted) return;
+      setState(() => _googleSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Đã đăng ký qua Google & lưu Firebase Authentication (UID: ${profile.firebaseUid ?? "OK"}).',
+          ),
+        ),
+      );
+      Navigator.of(context).pop();
+      widget.onRegistered();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _googleSubmitting = false;
+        _apiErrorBanner = e.message;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
@@ -448,6 +593,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
     final confirm = _confirmCtrl.text;
 
     setState(() {
+      _apiErrorBanner = null;
       _nameErr = name.length >= 2 ? null : 'Bạn hãy nhập họ và tên đầy đủ.';
       _emailErr = email.contains('@') ? null : 'Email chưa đúng định dạng.';
       _phoneErr = RegExp(r'^0\d{9}$').hasMatch(phone)
@@ -457,8 +603,9 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
               pass.isEmpty
           ? 'Mật khẩu cần tối thiểu 8 ký tự, nên có chữ hoa và chữ số.'
           : null;
-      _confirmErr =
-          (confirm == pass && confirm.isNotEmpty) ? null : 'Mật khẩu nhập lại không khớp.';
+      _confirmErr = (confirm == pass && confirm.isNotEmpty)
+          ? null
+          : 'Mật khẩu nhập lại không khớp.';
     });
 
     if (_nameErr != null ||
@@ -469,24 +616,53 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => OtpVerificationScreen(
-          email: email,
-          purpose: OtpPurpose.verifyEmail,
-          onVerified: (_) {
-            Navigator.of(context).pop();
-            Navigator.of(context).pop();
-            widget.onRegistered();
-          },
+    setState(() => _submitting = true);
+    try {
+      final challenge = await AuthApiService.instance.registerCustomer(
+        fullName: name,
+        email: email,
+        phone: phone,
+        password: pass,
+      );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OtpVerificationScreen(
+            email: email,
+            role: UserRole.customer,
+            otpTicket: challenge.otpTicket,
+            purpose: OtpPurpose.verifyEmail,
+            onVerified: (_) {
+              final uid = AuthSessionStore.instance.firebaseUid ?? 'đã lưu';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Xác thực OTP thành công! Tài khoản đã lưu vào Firebase Authentication ($uid).',
+                  ),
+                ),
+              );
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+              widget.onRegistered();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _apiErrorBanner = e.message;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final textTheme = Theme.of(context).textTheme;
     final strength = PasswordStrength.evaluate(_passCtrl.text);
 
     return Scaffold(
@@ -499,6 +675,47 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Loại 1: Đăng ký nhanh bằng Google (Firebase)',
+                  style: textTheme.labelLarge,
+                ),
+                SizedBox(height: t.space2),
+                AppButton(
+                  label: 'Đăng ký qua Google (Firebase Authentication)',
+                  leadingIcon: Icons.account_circle_outlined,
+                  expandWidth: true,
+                  loading: _googleSubmitting,
+                  variant: AppButtonVariant.secondary,
+                  onPressed: _registerViaGoogleFirebase,
+                ),
+                SizedBox(height: t.space4),
+                const Divider(),
+                SizedBox(height: t.space3),
+                Text(
+                  'Loại 2: Đăng ký bằng Email (Nhận OTP qua SMTP -> Lưu Firebase Auth)',
+                  style: textTheme.labelLarge,
+                ),
+                SizedBox(height: t.space4),
+
+                if (_apiErrorBanner != null) ...[
+                  Container(
+                    padding: EdgeInsets.all(t.space3),
+                    decoration: BoxDecoration(
+                      color: t.statusCancelled.background,
+                      borderRadius: BorderRadius.circular(t.radiusControl),
+                      border: Border.all(color: t.statusCancelled.border),
+                    ),
+                    child: Text(
+                      _apiErrorBanner!,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: t.statusCancelled.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: t.space4),
+                ],
+
                 AppTextField(
                   label: 'Họ và tên',
                   hintText: 'Nguyễn Văn An',
@@ -508,7 +725,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                 ),
                 SizedBox(height: t.space4),
                 AppTextField(
-                  label: 'Email',
+                  label: 'Email nhận mã OTP',
                   hintText: 'an.nguyen@gmail.com',
                   controller: _emailCtrl,
                   errorText: _emailErr,
@@ -549,6 +766,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                 AppButton(
                   label: 'Đăng ký và nhận mã OTP (S-04)',
                   expandWidth: true,
+                  loading: _submitting,
                   onPressed: _submit,
                   variant: AppButtonVariant.primary,
                 ),
@@ -561,17 +779,23 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   }
 }
 
-/// FE-13: Man hinh S-04 Nhap OTP dung chung (che email hu***@gmail.com, tin cay thiet bi, gui deviceId).
+/// FE-13: Man hinh S-04 Nhap OTP dung chung (che email hu***@gmail.com, tin cay thiet bi, goi API verify).
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
   final OtpPurpose purpose;
+  final UserRole role;
+  final String? otpTicket;
   final ValueChanged<bool> onVerified;
+  final ValueChanged<String>? onVerifiedWithCode;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
     required this.purpose,
+    this.role = UserRole.customer,
+    this.otpTicket,
     required this.onVerified,
+    this.onVerifiedWithCode,
   });
 
   @override
@@ -583,16 +807,91 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   int _attempts = 0;
   String? _errorText;
   int _secondsLeft = 60;
+  bool _verifying = false;
+  String? _currentTicket;
+  String _lastCode = '123456';
 
-  void _onCodeCompleted(String code) {
+  @override
+  void initState() {
+    super.initState();
+    _currentTicket = widget.otpTicket;
+  }
+
+  Future<void> _verifyOtpCode(String code) async {
+    _lastCode = code;
     if (code == '000000') {
       setState(() {
         _attempts += 1;
-        _errorText = 'Mã OTP chưa chính xác. Bạn còn ${5 - _attempts} lần thử.';
+        _errorText = 'Mã OTP chưa chính xác. Bạn còn ${3 - _attempts} lần thử.';
       });
       return;
     }
-    widget.onVerified(_trustDevice);
+
+    if (widget.purpose == OtpPurpose.resetPassword ||
+        widget.purpose == OtpPurpose.changePassword) {
+      widget.onVerifiedWithCode?.call(code);
+      widget.onVerified(_trustDevice);
+      return;
+    }
+
+    setState(() {
+      _verifying = true;
+      _errorText = null;
+    });
+
+    try {
+      if (widget.purpose == OtpPurpose.verifyEmail) {
+        await AuthApiService.instance.verifyEmailOtp(
+          role: widget.role,
+          email: widget.email,
+          otpTicket: _currentTicket,
+          code: code,
+          trustDevice: _trustDevice,
+        );
+      } else if (widget.purpose == OtpPurpose.login2fa) {
+        await AuthApiService.instance.verifyLoginOtp(
+          role: widget.role,
+          otpTicket: _currentTicket ?? 'offline-ticket',
+          code: code,
+          trustDevice: _trustDevice,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _verifying = false);
+      widget.onVerifiedWithCode?.call(code);
+      widget.onVerified(_trustDevice);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _verifying = false;
+        _attempts += 1;
+        _errorText = e.message;
+      });
+    }
+  }
+
+  Future<void> _handleResendOtp() async {
+    try {
+      final challenge = await AuthApiService.instance.resendOtp(
+        role: widget.role,
+        email: widget.email,
+        purpose: widget.purpose,
+      );
+      if (!mounted) return;
+      setState(() {
+        _currentTicket = challenge.otpTicket;
+        _attempts = 0;
+        _errorText = null;
+        _secondsLeft = challenge.cooldownSeconds;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(challenge.message)),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorText = e.message);
+    }
   }
 
   @override
@@ -600,7 +899,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final t = context.tokens;
     final textTheme = Theme.of(context).textTheme;
     final maskedEmail = AuthSessionStore.maskEmail(widget.email);
-    final isLocked = _attempts >= 5;
+    final isLocked = _attempts >= 3;
 
     return Scaffold(
       appBar: AppBar(title: Text('S-04 ${widget.purpose.title}')),
@@ -616,8 +915,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   status: isLocked
                       ? CourtBookingStatus.cancelledOrSuspended
                       : CourtBookingStatus.pending,
-                  customLabel:
-                      isLocked ? 'Tạm khóa nhập OTP' : 'Thiết bị: AND-PIXEL7-9821',
+                  customLabel: isLocked
+                      ? 'Đã khóa mã OTP (sai 3 lần)'
+                      : 'Thiết bị: ${AuthSessionStore.instance.deviceId}',
                 ),
                 SizedBox(height: t.space3),
                 Text(
@@ -626,22 +926,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
                 SizedBox(height: t.space2),
                 Text(
-                  'Mã xác thực đã được gửi tới địa chỉ $maskedEmail. (Nhập mã 6 số bất kỳ khác 000000 để xác nhận, hoặc nhập 000000 để thử trạng thái báo lỗi).',
+                  'Mã OTP 6 số đã được gửi qua SMTP tới địa chỉ $maskedEmail. Khi xác thực thành công, tài khoản được đồng bộ lên Firebase Authentication.',
                   style: textTheme.bodyMedium,
                 ),
                 SizedBox(height: t.space6),
                 OtpInput(
-                  onCompleted: _onCodeCompleted,
+                  onCompleted: _verifyOtpCode,
                   isLocked: isLocked,
                   errorText: _errorText,
                   secondsRemaining: _secondsLeft,
-                  onResend: () {
-                    setState(() {
-                      _attempts = 0;
-                      _errorText = null;
-                      _secondsLeft = 60;
-                    });
-                  },
+                  onResend: _handleResendOtp,
                 ),
                 SizedBox(height: t.space4),
                 Row(
@@ -675,9 +969,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       child: AppButton(
                         label: 'Xác nhận ngay',
                         variant: AppButtonVariant.primary,
+                        loading: _verifying,
                         onPressed: isLocked
                             ? null
-                            : () => widget.onVerified(_trustDevice),
+                            : () => _verifyOtpCode(_lastCode),
                       ),
                     ),
                   ],
@@ -694,7 +989,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 /// FE-14: Man hinh S-05 Quen mat khau -> S-04 OTP -> S-06 Dat lai mat khau moi.
 class ForgotPasswordScreen extends StatefulWidget {
   final String initialEmail;
-  const ForgotPasswordScreen({super.key, this.initialEmail = ''});
+  final UserRole role;
+
+  const ForgotPasswordScreen({
+    super.key,
+    this.initialEmail = '',
+    this.role = UserRole.customer,
+  });
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -703,6 +1004,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   late final TextEditingController _emailCtrl;
   bool _sentBannerVisible = false;
+  bool _sending = false;
+  String? _errorText;
 
   @override
   void initState() {
@@ -714,6 +1017,60 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void dispose() {
     _emailCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendResetOtp() async {
+    final email = _emailCtrl.text.trim().isEmpty
+        ? 'customer@badminton.vn'
+        : _emailCtrl.text.trim();
+
+    setState(() {
+      _sending = true;
+      _errorText = null;
+    });
+
+    try {
+      final challenge = await AuthApiService.instance.forgotPassword(
+        role: widget.role,
+        email: email,
+      );
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sentBannerVisible = true;
+      });
+
+      String capturedCode = '123456';
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OtpVerificationScreen(
+            email: email,
+            role: widget.role,
+            otpTicket: challenge.otpTicket,
+            purpose: OtpPurpose.resetPassword,
+            onVerifiedWithCode: (code) => capturedCode = code,
+            onVerified: (_) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) => ResetPasswordScreen(
+                    email: email,
+                    role: widget.role,
+                    otpTicket: challenge.otpTicket,
+                    otpCode: capturedCode,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _errorText = e.message;
+      });
+    }
   }
 
   @override
@@ -737,7 +1094,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 SizedBox(height: t.space2),
                 Text(
-                  'Nhập email bạn đã dùng đăng ký. Hệ thống sẽ gửi mã OTP 6 chữ số để đặt lại mật khẩu.',
+                  'Nhập email bạn đã dùng đăng ký. Hệ thống sẽ gửi mã OTP 6 chữ số qua SMTP để đặt lại mật khẩu.',
                   style: textTheme.bodyMedium,
                 ),
                 SizedBox(height: t.space6),
@@ -745,6 +1102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   label: 'Email tài khoản',
                   hintText: 'nhap@email.com',
                   controller: _emailCtrl,
+                  errorText: _errorText,
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.mail_outline_rounded,
                 ),
@@ -781,27 +1139,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 AppButton(
                   label: 'Gửi mã xác thực & sang S-04',
                   expandWidth: true,
-                  onPressed: () {
-                    setState(() => _sentBannerVisible = true);
-                    final email = _emailCtrl.text.trim().isEmpty
-                        ? 'huuda@gmail.com'
-                        : _emailCtrl.text.trim();
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => OtpVerificationScreen(
-                          email: email,
-                          purpose: OtpPurpose.resetPassword,
-                          onVerified: (_) {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const ResetPasswordScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
+                  loading: _sending,
+                  onPressed: _sendResetOtp,
                 ),
               ],
             ),
@@ -814,7 +1153,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
 /// FE-14: Man hinh S-06 Dat lai mat khau moi (sau khi xac thuc S-04 OTP).
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final String email;
+  final UserRole role;
+  final String? otpTicket;
+  final String otpCode;
+
+  const ResetPasswordScreen({
+    super.key,
+    this.email = 'customer@badminton.vn',
+    this.role = UserRole.customer,
+    this.otpTicket,
+    this.otpCode = '123456',
+  });
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -824,6 +1174,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _newPassCtrl = TextEditingController();
   final TextEditingController _confirmCtrl = TextEditingController();
   String? _errorText;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -832,7 +1183,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
-  void _saveNewPassword() {
+  Future<void> _saveNewPassword() async {
     if (_newPassCtrl.text.length < 8) {
       setState(() => _errorText = 'Mật khẩu mới cần tối thiểu 8 ký tự.');
       return;
@@ -841,12 +1192,37 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       setState(() => _errorText = 'Mật khẩu nhập lại không khớp.');
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đặt lại mật khẩu thành công. Bạn hãy đăng nhập lại.'),
-      ),
-    );
-    Navigator.of(context).popUntil((route) => route.isFirst);
+
+    setState(() {
+      _saving = true;
+      _errorText = null;
+    });
+
+    try {
+      await AuthApiService.instance.resetPassword(
+        role: widget.role,
+        email: widget.email,
+        otpTicket: widget.otpTicket,
+        code: widget.otpCode,
+        newPassword: _newPassCtrl.text,
+      );
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Đặt lại mật khẩu thành công (đã đồng bộ Firebase Auth & thu hồi phiên cũ). Bạn hãy đăng nhập lại.',
+          ),
+        ),
+      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _errorText = e.message;
+      });
+    }
   }
 
   @override
@@ -887,6 +1263,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 AppButton(
                   label: 'Lưu mật khẩu mới',
                   expandWidth: true,
+                  loading: _saving,
                   onPressed: _saveNewPassword,
                   variant: AppButtonVariant.primary,
                 ),
