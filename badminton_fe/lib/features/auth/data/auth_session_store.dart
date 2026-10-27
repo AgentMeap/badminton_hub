@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../core/router/app_router.dart';
+import 'google_auth_service.dart';
 
 /// Muc do manh cua mat khau dung cho S-03 va S-06 (khong chi dung mau).
 enum PasswordStrength {
@@ -207,6 +208,7 @@ class AuthSessionStore extends ChangeNotifier {
     _accessToken = null;
     _refreshToken = null;
     _firebaseUid = null;
+    GoogleAuthService.instance.signOut();
     notifyListeners();
   }
 }

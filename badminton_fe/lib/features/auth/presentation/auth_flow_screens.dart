@@ -10,6 +10,7 @@ import '../../../core/widgets/status_chip.dart';
 import '../../owner/onboarding/presentation/owner_onboarding_screens.dart';
 import '../data/auth_api_service.dart';
 import '../data/auth_session_store.dart';
+import '../data/google_auth_service.dart';
 
 /// FE-11: Man hinh S-01 Splash kiem tra refresh token de vao thang Shell hoac S-02.
 class SplashScreen extends StatefulWidget {
@@ -245,9 +246,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _bannerError = null;
     });
     try {
+      final credential = await GoogleAuthService.instance.signIn();
+      if (credential == null) {
+        // Nguoi dung huy chon tai khoan Google.
+        if (mounted) setState(() => _googleLoading = false);
+        return;
+      }
       final profile = await AuthApiService.instance.signInWithGoogleFirebase(
-        email: 'google.player@gmail.com',
-        fullName: 'Người chơi Google Firebase',
+        email: credential.email,
+        fullName: credential.fullName,
+        firebaseIdToken: credential.firebaseIdToken,
       );
       if (!mounted) return;
       setState(() => _googleLoading = false);

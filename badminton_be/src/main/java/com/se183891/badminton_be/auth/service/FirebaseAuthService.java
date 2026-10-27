@@ -1,5 +1,6 @@
 package com.se183891.badminton_be.auth.service;
 
+import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -75,8 +76,11 @@ public class FirebaseAuthService {
 
         try (FileInputStream stream = new FileInputStream(path.toFile())) {
             if (FirebaseApp.getApps().isEmpty()) {
+                // Spring Boot nang httpclient5 len 5.6.x (tu giai nen gzip) khien transport mac dinh
+                // cua firebase-admin bao "Not in GZIP format" khi tai public key -> dung NetHttpTransport.
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(stream))
+                        .setHttpTransport(new NetHttpTransport())
                         .build();
                 FirebaseApp.initializeApp(options);
             }
@@ -170,6 +174,7 @@ public class FirebaseAuthService {
                         decoded.getPicture()
                 );
             } catch (FirebaseAuthException ex) {
+                log.warn("Firebase verifyIdToken failed: code={}, message={}", ex.getAuthErrorCode(), ex.getMessage());
                 throw new AppException(ErrorCode.FIREBASE_TOKEN_INVALID);
             }
         }
@@ -189,6 +194,7 @@ public class FirebaseAuthService {
             return new GoogleTokenClaims(uid, email, fullName, null);
         }
 
+        log.warn("Rejected Google token: Firebase Admin SDK not initialized (realFirebaseInitialized={})", realFirebaseInitialized);
         throw new AppException(ErrorCode.FIREBASE_TOKEN_INVALID);
     }
 
